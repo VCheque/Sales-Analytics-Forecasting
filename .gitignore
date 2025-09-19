@@ -1,0 +1,17 @@
+# --- R / RStudio ---
+.Rhistory
+.RData
+.Rproj.user/
+
+# --- Mac OS ---
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# --- Python (if you add any ETL scripts) ---
+__pycache__/
+*.pyc
+
+# --- renv ---
+renv/library/         # local package installations
