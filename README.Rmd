@@ -1,0 +1,92 @@
+---
+title: "U.S. Retail Sales Analytics & Forecasting"
+output:
+  github_document:
+    toc: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.retina = 2)
+library(readr); library(dplyr); library(knitr)
+```
+
+**Overview**
+
+This repository contains an end-to-end workflow for analyzing U.S. retail weekly sales and producing short-term forecasts (ARIMA baseline; Prophet optional).
+For the full narrative, see the HTML report in report/ or the GitHub Pages link.
+
+*Live report (GitHub Pages)*: https://vcheque.github.io/Sales-Analytics-Forecasting/
+*Raw HTML in repo*: report/sales_analysis_report.html
+
+**Quick KPIs**
+
+```{r}
+if (file.exists("outputs/tables/kpis.csv")) {
+  kpis <- read_csv("outputs/tables/kpis.csv", show_col_types = FALSE)
+  kable(kpis)
+} else {
+  cat("KPIs not found yet. Run scripts/02_eda_visuals.R to generate outputs/tables/kpis.csv.")
+}
+```
+
+
+**Highlights**
+
+*Overall Weekly Sales Trend*
+
+```{r}
+if (file.exists("outputs/figures/01_overall_weekly_sales_trend.png")) {
+  knitr::include_graphics("outputs/figures/01_overall_weekly_sales_trend.png")
+}
+```
+
+
+*Top 10 Stores by Total Sales*
+
+```{r}
+if (file.exists("outputs/figures/02_top10_stores_total_sales.png")) {
+  knitr::include_graphics("outputs/figures/02_top10_stores_total_sales.png")
+}
+```
+
+
+*Seasonality Heatmap*
+
+```{r}
+if (file.exists("outputs/figures/03_seasonality_heatmap_month_year.png")) {
+  knitr::include_graphics("outputs/figures/03_seasonality_heatmap_month_year.png")
+}
+
+```
+
+**How to Reproduce**
+
+    scripts/01_data_cleaning.R → creates data/processed/*
+    
+    scripts/02_eda_visuals.R → saves figures/tables to outputs/*
+    
+    scripts/03_forecasting.R → saves forecast plots + metrics
+    
+    Shiny: shiny::runApp("app")
+    
+    Report: knit report/sales_analysis_report.Rmd
+
+**Environment**
+
+Reproducibility managed by renv. Run renv::restore() to install packages.
+
+
+> Notes  
+> Keep **heavy computations out** of `README.Rmd`. You’re including already-saved images/tables, so knitting is instantaneous.  
+> This gives you a polished README **without** duplicating the long HTML report.
+
+## 2) Render to GitHub-ready Markdown
+From your project root in R:
+
+```r
+if (!"rmarkdown" %in% rownames(installed.packages())) install.packages("rmarkdown")
+rmarkdown::render("README.Rmd", output_format = "github_document", output_file = "README.md")
+
+
+

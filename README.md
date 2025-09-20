@@ -1,99 +1,67 @@
-U.S. Retail Sales Analytics & Forecasting (R + Shiny)
+U.S. Retail Sales Analytics & Forecasting
+================
+
+- [2) Render to GitHub-ready
+  Markdown](#2-render-to-github-ready-markdown)
 
 **Overview**
 
-This project analyzes U.S. retail store sales data to uncover key business insights and predict future sales trends.
-The work includes data cleaning, exploratory analysis, forecasting models, and an interactive Shiny dashboard.
-It is designed as a portfolio case study for roles in Data Analysis, Business Intelligence, and Data Engineering.
+This repository contains an end-to-end workflow for analyzing U.S.
+retail weekly sales and producing short-term forecasts (ARIMA baseline;
+Prophet optional). For the full narrative, see the HTML report in
+report/ or the GitHub Pages link.
 
-**Business Problem**
+*Live report (GitHub Pages)*:
+<https://vcheque.github.io/Sales-Analytics-Forecasting/> *Raw HTML in
+repo*: report/sales_analysis_report.html
 
-Retailers need to:
+**Quick KPIs**
 
-    Understand sales patterns across products, stores, and time.
-    
-    Identify seasonality and holiday effects on demand.
-    
-    Forecast future sales to optimize inventory and staffing.
+| min_date   | max_date   | n_stores | n_depts | total_sales |
+|:-----------|:-----------|---------:|--------:|------------:|
+| 2010-02-05 | 2012-10-26 |       45 |      81 |  6737218987 |
 
+**Highlights**
 
-**Repository Structure**
+*Overall Weekly Sales Trend*
 
-sales-analytics-forecasting/
-├── data/
-│   └── raw/               # raw datasets (from Kaggle)
-├── scripts/
-│   ├── 01_data_cleaning.R
-│   ├── 02_eda_visuals.R
-│   ├── 03_forecasting.R
-│   └── 04_shiny_app.R
-├── app/
-│   └── app.R              # Shiny app code
-├── report/
-│   └── sales_analysis_report.Rmd
-├── README.md              # project documentation
-└── renv.lock              # reproducible R environment
+![](outputs/figures/01_overall_weekly_sales_trend.png)<!-- -->
 
+*Top 10 Stores by Total Sales*
 
-**Tech Stack**
+![](outputs/figures/02_top10_stores_total_sales.png)<!-- -->
 
-    R (data cleaning, visualization, modeling)
-    
-    ggplot2 (EDA & plots)
-    
-    forecast / prophet (time series forecasting)
-    
-    Shiny (interactive dashboard)
-    
-    renv (reproducible environment)
+*Seasonality Heatmap*
 
-**Dataset**
+![](outputs/figures/03_seasonality_heatmap_month_year.png)<!-- -->
 
-    Source: Kaggle – Store Sales Time Series Forecasting (https://www.kaggle.com/competitions/walmart-recruiting-store-sales-forecasting/data)
-    
-    Description: Daily sales for multiple U.S. stores and product families.
-    
-    Features:
-    
-    date (daily)
-    
-    store_nbr (store ID)
-    
-    family (product category)
-    
-    sales (units sold)
-    
-    onpromotion (promo indicator)
+**How to Reproduce**
 
+    scripts/01_data_cleaning.R → creates data/processed/*
 
-**Methodology**
+    scripts/02_eda_visuals.R → saves figures/tables to outputs/*
 
-*Data Cleaning*
+    scripts/03_forecasting.R → saves forecast plots + metrics
 
-    Handle missing values, duplicates, and date formatting.
-    
-    Create new features (month, year, weekday, holiday flag).
+    Shiny: shiny::runApp("app")
 
-*Exploratory Data Analysis (EDA)*
+    Report: knit report/sales_analysis_report.Rmd
 
-    Sales trends by store and product family.
-    
-    Seasonal patterns and holiday spikes.
-    
-    Correlation between promotions and sales.
+**Environment**
 
-*Forecasting Models*
+Reproducibility managed by renv. Run renv::restore() to install
+packages.
 
-    ARIMA (forecast package).
-    
-    Prophet (Meta’s time-series library).
-    
-    Compare models with RMSE/MAE.
+> Notes  
+> Keep **heavy computations out** of `README.Rmd`. You’re including
+> already-saved images/tables, so knitting is instantaneous.  
+> This gives you a polished README **without** duplicating the long HTML
+> report.
 
-*Dashboard (Shiny)*
+## 2) Render to GitHub-ready Markdown
 
-    Overview tab (KPIs).
-    
-    Interactive filters (store, product).
-    
-    Forecast tab (next 3–6 months prediction).
+From your project root in R:
+
+\`\`\`r if (!“rmarkdown” %in% rownames(installed.packages()))
+install.packages(“rmarkdown”) rmarkdown::render(“README.Rmd”,
+output_format = “github_document”, output_file = “README.md”)
