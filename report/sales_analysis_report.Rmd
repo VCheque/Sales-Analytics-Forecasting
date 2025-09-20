@@ -1,0 +1,198 @@
+---
+title: "U.S. Retail Sales Analytics & Forecasting"
+author: "Valter Cheque"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: false
+    theme: readable
+    df_print: paged
+    highlight: tango
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+# I load packages here and keep echo=TRUE in later chunks to show the workflow.
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.retina = 2)
+pkgs <- c("readr","dplyr","ggplot2","lubridate","scales","tibble","DT","knitr")
+to_install <- setdiff(pkgs, rownames(installed.packages()))
+if (length(to_install)) install.packages(to_install)
+lapply(pkgs, library, character.only = TRUE)
+```
+
+**1. Project Overview**
+
+This report documents my end-to-end workflow for analyzing U.S. retail weekly sales and producing forecasts.
+It covers data cleaning, exploratory analysis, model baselines (ARIMA, Prophet), and key insights for decision-making.
+
+*Repository structure (abridged)*:
+
+    data/raw/                 # input files from Kaggle
+    data/processed/           # tidy outputs for analysis & app
+    scripts/01_data_cleaning.R
+    scripts/02_eda_visuals.R
+    scripts/03_forecasting.R
+    app/app.R                 # Shiny app
+    report/sales_analysis_report.Rmd  # this file
+
+**2. Data and Assumptions**
+
+Source. Kaggle “Walmart Recruiting – Store Sales Forecasting”.
+Granularity. Weekly sales per store and department.
+Target. Weekly_Sales aggregated to store-week for forecasting.
+
+*Files used downstream*:
+
+    data/processed/store_weekly_sales.* (store-level weekly totals)
+    
+    outputs/figures/*.png (EDA figures)
+    
+    outputs/tables/*.csv (KPIs, missingness, metrics)
+    
+3. Quick KPIs
+
+```{r}
+# I read precomputed KPIs to keep the report fast and deterministic.
+kpi_path <- file.path("..","outputs","tables","kpis.csv")
+kpis <- readr::read_csv(kpi_path, show_col_types = FALSE)
+kpis
+```
+
+n words: the data spans from r as.Date(kpis$min_date[1]) to r as.Date(kpis$max_date[1]), with r kpis$n_stores[1] stores and total sales of r scales::dollar(kpis$total_sales[1]).
+
+
+4. Data Quality Notes
+
+```{r}
+# I inspect missingness to guide cleaning and feature usage.
+miss_path <- file.path("..", "outputs","tables","missingness_summary.csv")
+missingness <- readr::read_csv(miss_path, show_col_types = FALSE)
+knitr::kable(head(missingness, 15), caption = "Top columns by missing values")
+```
+
+*Actionable points*:
+
+    Promotional markdown fields contain many missing values; in cleaning, I imputed 0 as “no promotion.”
+    
+    CPI/Unemployment were imputed by store-median, then global median, to avoid discarding weeks.
+
+
+5. Exploratory Analysis
+
+5.1 Overall Weekly Trend
+
+```{r}
+knitr::include_graphics(file.path("..","outputs","figures","01_overall_weekly_sales_trend.png"))
+```
+
+Interpretation: I look for seasonality, structural breaks, and scale.
+
+5.2 Top 10 Stores by Total Sales
+
+```{r}
+knitr::include_graphics(file.path("..","outputs","figures","02_top10_stores_total_sales.png"))
+```
+
+
+5.3 Seasonality Heatmap (Monthly by Year)
+
+```{r}
+knitr::include_graphics(file.path("..","outputs","figures","03_seasonality_heatmap_month_year.png"))
+```
+
+Interpretation: I confirm expected peaks near major U.S. holidays and evaluate month-over-month patterns.
+
+5.4 Promotions vs Sales
+
+```{r}
+knitr::include_graphics(file.path("..","outputs","figures","04_promotions_vs_sales.png"))
+```
+
+Interpretation: I expect a positive but nonlinear relationship; diminishing returns at very high markdowns.
+
+5.5 Holiday Effect
+
+```{r}
+knitr::include_graphics(file.path("..","outputs","figures","05_holiday_effect_boxplot.png"))
+```
+
+Interpretation: Holiday weeks show materially higher dispersion and median sales.
+
+**6. Forecasting Design**
+
+I forecast at the store-week level.
+
+*Rationale*: this aligns with inventory and staffing decisions and avoids department noise.
+
+*Holdout*. Last 12 weeks per store to simulate an unseen future.
+*Baselines*. ARIMA via auto.arima(); Prophet optional for cross-check.
+
+*Key choices*:
+
+    Weekly frequency set to 52 for ARIMA seasonality detection.
+    
+    Conservative Prophet priors to avoid overfitting.
+    
+    Metrics: RMSE, MAE, and MAPE (excluding zero targets for stability).
+
+*6.1 Per-Store Metrics*
+
+```{r}
+by_store <- readr::read_csv(file.path("..","outputs","tables","model_metrics_by_store.csv"), show_col_types = FALSE)
+knitr::kable(by_store, caption = "Holdout metrics by store and model")
+```
+
+*6.2 Summary Metrics*
+
+```{r}
+avg <- readr::read_csv(file.path("..","outputs","tables","model_metrics_avg.csv"), show_col_types = FALSE)
+knitr::kable(avg, caption = "Average holdout metrics across evaluated stores")
+```
+
+**Notes**:
+
+    Lower RMSE/MAE indicate better absolute accuracy; lower MAPE indicates better relative accuracy.
+    
+    If Prophet is unavailable locally, only ARIMA results are present.
+
+**7. What I Would Deploy**
+
+    Baseline ARIMA per store for short-term planning (simple, transparent).
+    
+    Add model monitoring: weekly backtests and error tracking.
+    
+    Future work: hierarchical forecast (department → store → chain) and exogenous drivers (markdowns, holidays).
+
+**8. Reproducibility**
+
+    Environment captured with renv.lock.
+    
+    Deterministic outputs saved under outputs/.
+    
+    To re-run:
+
+      1. scripts/01_data_cleaning.R
+      
+      2. scripts/02_eda_visuals.R
+      
+      3. scripts/03_forecasting.R
+      
+      4. Knit this report.
+
+
+```{r}
+sessionInfo()
+```
+
+
+
+## 7B) Knit the report
+From RStudio: open `report/sales_analysis_report.Rmd` → Knit.  
+This will create `report/sales_analysis_report.html` (self-contained).
+
+## Report
+- Full case study (GitHub Pages): https://github.com/VCheque/Sales-Analytics-Forecasting
+- Raw HTML in this repo: [report/sales_analysis_report.html](report/sales_analysis_report.html)
+
