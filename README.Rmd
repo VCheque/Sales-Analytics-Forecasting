@@ -60,6 +60,35 @@ if (file.exists("outputs/figures/03_seasonality_heatmap_month_year.png")) {
 
 ```
 
+*Backtesting (tsCV) snapshot*
+
+```{r backtest-readme-avg, echo=FALSE, message=FALSE, warning=FALSE}
+path_avg <- "outputs/tables/backtest_metrics_avg.csv"
+if (file.exists(path_avg)) {
+  bt_avg <- readr::read_csv(path_avg, show_col_types = FALSE)
+  knitr::kable(bt_avg, caption = "Rolling-origin CV — average metrics across evaluated stores")
+} else {
+  cat("Backtest summary not found. Run scripts/03b_backtesting.R.")
+}
+```
+
+```{r}
+path_hz <- "outputs/tables/backtest_metrics_by_horizon.csv"
+if (file.exists(path_hz)) {
+  bt_hz <- readr::read_csv(path_hz, show_col_types = FALSE)
+  library(ggplot2)
+  ggplot(bt_hz, aes(horizon, RMSE, group = store)) +
+    geom_line(alpha = 0.25) +
+    stat_summary(fun = mean, geom = "line", linewidth = 1) +
+    labs(title = "RMSE by Forecast Horizon (1..12 weeks)",
+         x = "Horizon (weeks ahead)", y = "RMSE") +
+    theme_minimal(base_size = 12)
+} else {
+  cat("Backtest horizon file not found. Run scripts/03b_backtesting.R.")
+}
+```
+
+
 **How to Reproduce**
 
     scripts/01_data_cleaning.R → creates data/processed/*
@@ -77,16 +106,6 @@ if (file.exists("outputs/figures/03_seasonality_heatmap_month_year.png")) {
 Reproducibility managed by renv. Run renv::restore() to install packages.
 
 
-> Notes  
-> Keep **heavy computations out** of `README.Rmd`. You’re including already-saved images/tables, so knitting is instantaneous.  
-> This gives you a polished README **without** duplicating the long HTML report.
-
-## 2) Render to GitHub-ready Markdown
-From your project root in R:
-
-```r
-if (!"rmarkdown" %in% rownames(installed.packages())) install.packages("rmarkdown")
-rmarkdown::render("README.Rmd", output_format = "github_document", output_file = "README.md")
 
 
 

@@ -151,6 +151,50 @@ avg <- readr::read_csv(file.path("..","outputs","tables","model_metrics_avg.csv"
 knitr::kable(avg, caption = "Average holdout metrics across evaluated stores")
 ```
 
+
+*6.3 Rolling-origin cross-validation (tsCV)*
+
+I complement the last-12-weeks holdout with a rolling-origin backtest using `forecast::tsCV`, evaluating horizons 1..12 weeks ahead on the top stores by sales. This yields a more comprehensive picture of stability and multi-step performance.
+
+```{r backtest-load, echo=TRUE, message=FALSE, warning=FALSE}
+# Load precomputed metrics (from scripts/03b_backtesting.R)
+path_avg <- file.path("..","outputs","tables","backtest_metrics_avg.csv")
+path_store <- file.path("..","outputs","tables","backtest_metrics_by_store.csv")
+path_hz <- file.path("..","outputs","tables","backtest_metrics_by_horizon.csv")
+
+have_all <- file.exists(path_avg) && file.exists(path_store) && file.exists(path_hz)
+
+if (have_all) {
+  bt_avg   <- readr::read_csv(path_avg,   show_col_types = FALSE)
+  bt_store <- readr::read_csv(path_store, show_col_types = FALSE)
+  bt_hz    <- readr::read_csv(path_hz,    show_col_types = FALSE)
+} else {
+  cat("Backtest files not found. Run scripts/03b_backtesting.R and re-knit.\n")
+}
+```
+
+```{r}
+if (have_all) {
+  knitr::kable(bt_avg, caption = "Rolling-origin CV — average metrics across evaluated stores")
+}
+```
+
+```{r}
+if (have_all) {
+  library(ggplot2)
+  p <- ggplot(bt_hz, aes(horizon, RMSE, group = store)) +
+    geom_line(alpha = 0.25) +
+    stat_summary(fun = mean, geom = "line", linewidth = 1) +
+    labs(title = "RMSE by Forecast Horizon (1..12 weeks)",
+         x = "Horizon (weeks ahead)", y = "RMSE") +
+    theme_minimal(base_size = 12)
+  print(p)
+}
+```
+
+Interpretation: I look for error growth with horizon. The light lines show per-store RMSE by horizon; the bold line is the mean across stores. A gentle slope suggests stable short-term skill; a steep slope indicates quickly degrading accuracy.
+
+
 **Notes**:
 
     Lower RMSE/MAE indicate better absolute accuracy; lower MAPE indicates better relative accuracy.

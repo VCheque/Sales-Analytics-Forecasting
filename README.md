@@ -1,9 +1,6 @@
 U.S. Retail Sales Analytics & Forecasting
 ================
 
-- [2) Render to GitHub-ready
-  Markdown](#2-render-to-github-ready-markdown)
-
 **Overview**
 
 This repository contains an end-to-end workflow for analyzing U.S.
@@ -35,6 +32,16 @@ repo*: report/sales_analysis_report.html
 
 ![](outputs/figures/03_seasonality_heatmap_month_year.png)<!-- -->
 
+*Backtesting (tsCV) snapshot*
+
+| n_stores |     RMSE |      MAE |
+|---------:|---------:|---------:|
+|       10 | 301699.1 | 165866.9 |
+
+Rolling-origin CV — average metrics across evaluated stores
+
+<img src="README_files/figure-gfm/unnamed-chunk-5-1.png" width="672" />
+
 **How to Reproduce**
 
     scripts/01_data_cleaning.R → creates data/processed/*
@@ -51,17 +58,3 @@ repo*: report/sales_analysis_report.html
 
 Reproducibility managed by renv. Run renv::restore() to install
 packages.
-
-> Notes  
-> Keep **heavy computations out** of `README.Rmd`. You’re including
-> already-saved images/tables, so knitting is instantaneous.  
-> This gives you a polished README **without** duplicating the long HTML
-> report.
-
-## 2) Render to GitHub-ready Markdown
-
-From your project root in R:
-
-\`\`\`r if (!“rmarkdown” %in% rownames(installed.packages()))
-install.packages(“rmarkdown”) rmarkdown::render(“README.Rmd”,
-output_format = “github_document”, output_file = “README.md”)
