@@ -230,13 +230,3 @@ Interpretation: I look for error growth with horizon. The light lines show per-s
 sessionInfo()
 ```
 
-
-
-## 7B) Knit the report
-From RStudio: open `report/sales_analysis_report.Rmd` → Knit.  
-This will create `report/sales_analysis_report.html` (self-contained).
-
-## Report
-- Full case study (GitHub Pages): https://github.com/VCheque/Sales-Analytics-Forecasting
-- Raw HTML in this repo: [report/sales_analysis_report.html](report/sales_analysis_report.html)
-
