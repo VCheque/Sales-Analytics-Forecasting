@@ -1,16 +1,30 @@
 U.S. Retail Sales Analytics & Forecasting
 ================
 
-**Overview**
+- [Overview](#overview)
+
+## Overview
 
 This repository contains an end-to-end workflow for analyzing U.S.
 retail weekly sales and producing short-term forecasts (ARIMA baseline;
-Prophet optional). For the full narrative, see the HTML report in
-report/ or the GitHub Pages link.
+Prophet optional). For the full narrative, see the HTML report or the
+GitHub Pages link below.
 
-*Live report (GitHub Pages)*:
-<https://vcheque.github.io/Sales-Analytics-Forecasting/> *Raw HTML in
-repo*: report/sales_analysis_report.html
+- Full case study (GitHub Pages):
+  <https://vcheque.github.io/Sales-Analytics-Forecasting/>
+- Raw HTML in repo:
+  [report/sales_analysis_report.html](report/sales_analysis_report.html)
+
+### What this repo shows
+
+- Data cleaning and feature engineering in R (reproducible with `renv`)
+- Exploratory analysis with saved figures for fast rendering
+- Forecasting: ARIMA baseline (Prophet optional for cross-check)
+- **Validation: 12-week holdout + rolling-origin CV (1–12 week
+  horizons). See the Model QA tab in the Shiny app and the [Backtesting
+  (tsCV) snapshot](#backtesting-tscv-snapshot).**
+- Deliverables: Shiny app, HTML report, and a GitHub-optimized README
+  (<https://kjog6w-valter-cheque.shinyapps.io/Sales_Forecast/>)
 
 **Quick KPIs**
 

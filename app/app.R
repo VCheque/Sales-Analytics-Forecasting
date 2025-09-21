@@ -81,6 +81,23 @@ kpi <- list(
   total_usd = sum(store_weekly$total_weekly_sales, na.rm = TRUE)
 )
 
+
+# ---------------------------
+# QA data loaders (prefer in-app copies; fall back to ../outputs/tables)
+# ---------------------------
+read_qa_csv <- function(fname) {
+  cands <- c(file.path("data","qa",fname), file.path("..","outputs","tables",fname))
+  hits  <- cands[file.exists(cands)]
+  if (!length(hits)) return(NULL)
+  readr::read_csv(hits[1], show_col_types = FALSE)
+}
+
+qa_model_by_store <- read_qa_csv("model_metrics_by_store.csv")      # holdout (ARIMA [+ Prophet if present])
+qa_model_avg      <- read_qa_csv("model_metrics_avg.csv")
+qa_bt_by_store    <- read_qa_csv("backtest_metrics_by_store.csv")   # tsCV (ARIMA)
+qa_bt_by_hz       <- read_qa_csv("backtest_metrics_by_horizon.csv")
+
+
 # ---------------------------
 # UI
 # ---------------------------
@@ -144,6 +161,42 @@ ui <- shiny::navbarPage(
              )
            )
   ),
+  
+  # ---- QA Model Preview -----
+  
+  tabPanel("Model QA",
+           fluidPage(
+             br(),
+             fluidRow(
+               column(6, h4("Holdout metrics (last 12 weeks)"),
+                      tableOutput("qa_holdout_avg")),
+               column(6, h4("Rolling-origin CV (1..12 weeks)"),
+                      tableOutput("qa_backtest_avg"))
+             ),
+             hr(),
+             fluidRow(
+               column(7, h4("RMSE by forecast horizon (per-store lines, mean in bold)"),
+                      plotOutput("qa_horizon_plot", height = 360)),
+               column(5, h4("Per-store holdout metrics"),
+                      div(style="font-size: 12px;", DT::DTOutput("qa_holdout_table")))
+             ),
+             hr(),
+             fluidRow(
+               column(3,
+                      h4("Audit a store"),
+                      selectInput("qa_store", "Store",
+                                  choices = sort(unique(store_weekly$store)),
+                                  selected = sort(unique(store_weekly$store))[1]),
+                      helpText("This plot recomputes an ARIMA holdout (last 12 weeks) for the selected store.")
+               ),
+               column(9,
+                      h4("Holdout: actual vs ARIMA prediction (last 12 weeks)"),
+                      plotOutput("qa_holdout_plot", height = 380)
+               )
+             )
+           )
+  ),
+  
   # ---- Data tab: preview & download ----
   tabPanel("Data",
            fluidPage(
@@ -245,6 +298,79 @@ server <- function(input, output, session) {
       theme_minimal(base_size = 12)
   })
   
+  # ---- Model QA: summary tables ----
+  output$qa_holdout_avg <- renderTable({
+    validate(need(!is.null(qa_model_avg), "No holdout summary found."))
+    qa_model_avg
+  }, striped = TRUE, bordered = TRUE, spacing = "s")
+  
+  output$qa_backtest_avg <- renderTable({
+    validate(need(!is.null(qa_bt_by_store), "No backtest summary found."))
+    # If you saved backtest_metrics_avg.csv, prefer that; otherwise compute a quick overall:
+    if (!is.null(qa_bt_by_store)) {
+      data.frame(
+        n_stores = nrow(qa_bt_by_store),
+        RMSE = mean(qa_bt_by_store$RMSE, na.rm = TRUE),
+        MAE  = mean(qa_bt_by_store$MAE,  na.rm = TRUE)
+      )
+    }
+  }, striped = TRUE, bordered = TRUE, spacing = "s")
+  
+  # ---- Model QA: horizon plot (tsCV) ----
+  output$qa_horizon_plot <- renderPlot({
+    validate(need(!is.null(qa_bt_by_hz), "No horizon file found. Run scripts/03b_backtesting.R."))
+    df <- qa_bt_by_hz
+    ggplot(df, aes(horizon, RMSE, group = store)) +
+      geom_line(alpha = 0.25) +
+      stat_summary(fun = mean, geom = "line", linewidth = 1) +
+      labs(x = "Horizon (weeks ahead)", y = "RMSE") +
+      theme_minimal(base_size = 12)
+  })
+  
+  # ---- Model QA: per-store holdout table ----
+  output$qa_holdout_table <- DT::renderDT({
+    validate(need(!is.null(qa_model_by_store), "No per-store holdout table found."))
+    DT::datatable(
+      qa_model_by_store,
+      options = list(pageLength = 8, scrollX = TRUE),
+      filter = "top",
+      rownames = FALSE
+    )
+  })
+  
+  # ---- Model QA: recompute a 12-week holdout for the chosen store ----
+  output$qa_holdout_plot <- renderPlot({
+    req(input$qa_store)
+    h <- 12L
+    df <- store_weekly %>%
+      dplyr::filter(store == input$qa_store) %>%
+      dplyr::arrange(date)
+    
+    validate(need(nrow(df) >= h + 10, "Not enough history to compute a holdout."))
+    
+    # train/test split
+    all_weeks  <- sort(unique(df$date))
+    test_weeks <- tail(all_weeks, h)
+    train_df   <- df %>% dplyr::filter(date < min(test_weeks))
+    test_df    <- df %>% dplyr::filter(date %in% test_weeks)
+    
+    y_ts <- stats::ts(train_df$total_weekly_sales, frequency = 52)
+    fit  <- forecast::auto.arima(y_ts, stepwise = TRUE, approximation = FALSE)
+    fc   <- forecast::forecast(fit, h = h)
+    
+    comp <- tibble::tibble(
+      date   = test_df$date,
+      Actual = test_df$total_weekly_sales,
+      ARIMA  = as.numeric(fc$mean)
+    ) %>% tidyr::pivot_longer(-date, names_to = "series", values_to = "value")
+    
+    ggplot(comp, aes(date, value, color = series)) +
+      geom_line(linewidth = 0.8) +
+      scale_y_continuous(labels = scales::label_dollar()) +
+      labs(x = "Week", y = "Weekly Sales (USD)") +
+      theme_minimal(base_size = 12)
+  })
+  
   # ---- Data tab: interactive table + download filtered CSV ----
   output$tbl_store <- renderDT({
     datatable(
@@ -259,6 +385,7 @@ server <- function(input, output, session) {
     filename = function() sprintf("store_weekly_sales_%s.csv", Sys.Date()),
     content  = function(file) readr::write_csv(store_weekly, file)
   )
+  
 }
 
 # ---------------------------
