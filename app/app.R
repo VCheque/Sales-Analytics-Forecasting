@@ -7,30 +7,70 @@
 # - I keep plots minimal and business-oriented; the README/report explains methods in detail.
 
 # ---------------------------
-# Packages (install on first run if missing)
 # ---------------------------
-ensure_pkgs <- function(pkgs) {
-  to_install <- setdiff(pkgs, rownames(installed.packages()))
-  if (length(to_install)) install.packages(to_install)
-  invisible(lapply(pkgs, library, character.only = TRUE))
-}
-ensure_pkgs(c("shiny","readr","dplyr","ggplot2","lubridate","scales","DT","forecast","tidyr"))
+# Packages (no installs at runtime)
+# ---------------------------
+# Optional: set a CRAN mirror anyway (harmless)
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+suppressPackageStartupMessages({
+  library(shiny)
+  library(readr)
+  library(dplyr)
+  library(ggplot2)
+  library(lubridate)
+  library(scales)
+  library(DT)
+  library(forecast)
+  library(tidyr)
+  # no library(qs) needed since we call qs::qread() directly when present
+})
 
 # ---------------------------
 # Data loading
 # ---------------------------
 # I expect these processed files from scripts/01_data_cleaning.R
-path_store <- file.path("data","processed","store_weekly_sales.csv")
-path_dept  <- file.path("data","processed","department_weekly_joined.csv")
 
-# Friendly error if a user tries to run the app before preparing data
-stopifnot(file.exists(path_store))
-stopifnot(file.exists(path_dept))
+read_any <- function(paths) {
+  paths <- paths[file.exists(paths)]
+  if (!length(paths)) stop("Processed dataset not found. Run scripts/01_data_cleaning.R first.")
+  p <- paths[1]
+  ext <- tools::file_ext(p)
+  if (ext %in% c("csv","gz")) {
+    out <- readr::read_csv(p, show_col_types = FALSE)
+  } else if (ext == "rds") {
+    out <- readr::read_rds(p)
+  } else if (ext == "qs") {
+    out <- qs::qread(p)
+  } else stop("Unsupported file extension: ", ext)
+  out
+}
 
-store_weekly <- readr::read_csv(path_store, show_col_types = FALSE) %>%
-  dplyr::mutate(date = as.Date(date))
-dept_weekly  <- readr::read_csv(path_dept,  show_col_types = FALSE) %>%
-  dplyr::mutate(date = as.Date(date))
+store_candidates <- c(
+  file.path("data","processed","store_weekly_sales.csv"),
+  file.path("data","processed","store_weekly_sales.csv.gz"),
+  file.path("data","processed","store_weekly_sales.rds"),
+  file.path("data","processed","store_weekly_sales.qs"),
+  file.path("..","data","processed","store_weekly_sales.csv"),
+  file.path("..","data","processed","store_weekly_sales.csv.gz"),
+  file.path("..","data","processed","store_weekly_sales.rds"),
+  file.path("..","data","processed","store_weekly_sales.qs")
+)
+
+dept_candidates <- c(
+  file.path("data","processed","department_weekly_joined.csv"),
+  file.path("data","processed","department_weekly_joined.csv.gz"),
+  file.path("data","processed","department_weekly_joined.rds"),
+  file.path("data","processed","department_weekly_joined.qs"),
+  file.path("..","data","processed","department_weekly_joined.csv"),
+  file.path("..","data","processed","department_weekly_joined.csv.gz"),
+  file.path("..","data","processed","department_weekly_joined.rds"),
+  file.path("..","data","processed","department_weekly_joined.qs")
+)
+
+store_weekly <- read_any(store_candidates) %>% dplyr::mutate(date = as.Date(date))
+dept_weekly  <- read_any(dept_candidates)  %>% dplyr::mutate(date = as.Date(date))
+
 
 # KPIs that don’t change during a session; I compute these once
 kpi <- list(
