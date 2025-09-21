@@ -23,6 +23,7 @@ suppressPackageStartupMessages({
   library(DT)
   library(forecast)
   library(tidyr)
+  library(bslib)
   # no library(qs) needed since we call qs::qread() directly when present
 })
 
@@ -105,109 +106,141 @@ ui <- shiny::navbarPage(
   title = "Retail Sales Analytics & Forecasting",
   id = "nav",
   collapsible = TRUE,
-  # ---- Overview tab: KPIs + trend + top stores ----
+  theme = bslib::bs_theme(bootswatch = "flatly"),
+  header = tags$head(
+    tags$link(rel = "stylesheet", href = "styles.css"),
+    # Only: background image presence check for gradient fallback
+    tags$script(HTML("
+      (function(){
+        var img = new Image();
+        img.onload = function(){ document.body.classList.remove('no-bg'); };
+        img.onerror = function(){ document.body.classList.add('no-bg'); };
+        img.src = 'bg-retail.jpg';
+      })();
+    "))
+  ),
+  
+  # ---- Overview ----
   tabPanel("Overview",
            fluidPage(
              br(),
-             fluidRow(
-               column(3, div(h4("Date range"),  p(paste(kpi$min_date, "to", kpi$max_date)))),
-               column(3, div(h4("Stores"),      p(kpi$n_stores))),
-               column(3, div(h4("Weeks"),       p(kpi$n_weeks))),
-               column(3, div(h4("Total Sales"), p(scales::dollar(kpi$total_usd))))
+             div(class = "section-card",
+                 fluidRow(
+                   column(3, div(h4("Date range"),  p(paste(kpi$min_date, "to", kpi$max_date)))),
+                   column(3, div(h4("Stores"),      p(kpi$n_stores))),
+                   column(3, div(h4("Weeks"),       p(kpi$n_weeks))),
+                   column(3, div(h4("Total Sales"), p(scales::dollar(kpi$total_usd))))
+                 )
              ),
-             hr(),
-             fluidRow(
-               column(8,
-                      h4("Overall Weekly Sales Trend"),
-                      plotOutput("p_trend", height = 360)
-               ),
-               column(4,
-                      h4("Top 10 Stores by Total Sales"),
-                      plotOutput("p_topstores", height = 360)
-               )
+             div(class = "section-card",
+                 fluidRow(
+                   column(8, h4("Overall Weekly Sales Trend"), plotOutput("p_trend", height = 360)),
+                   column(4, h4("Top 10 Stores by Total Sales"), plotOutput("p_topstores", height = 360))
+                 )
              )
            )
   ),
-  # ---- Explore tab: filter by store/department/date ----
+  
+  # ---- Explore ----
   tabPanel("Explore",
            fluidPage(
              br(),
-             fluidRow(
-               column(3, selectInput("store_sel", "Store(s)", choices = sort(unique(store_weekly$store)),
-                                     selected = sort(unique(store_weekly$store))[1], multiple = TRUE)),
-               column(3, uiOutput("dept_ui")),
-               column(4, dateRangeInput("date_rng", "Date range",
-                                        start = kpi$min_date, end = kpi$max_date,
-                                        min = kpi$min_date, max = kpi$max_date, weekstart = 1))
+             div(class = "section-card",
+                 fluidRow(
+                   column(3, selectInput("store_sel", "Store(s)",
+                                         choices = sort(unique(store_weekly$store)),
+                                         selected = sort(unique(store_weekly$store))[1],
+                                         multiple = TRUE)),
+                   column(3, uiOutput("dept_ui")),
+                   column(4, dateRangeInput("date_rng", "Date range",
+                                            start = kpi$min_date, end = kpi$max_date,
+                                            min = kpi$min_date,  max = kpi$max_date, weekstart = 1))
+                 )
              ),
-             hr(),
-             fluidRow(
-               column(12, h4("Filtered Sales by Department"), plotOutput("p_dept_ts", height = 380))
+             div(class = "section-card",
+                 fluidRow(
+                   column(12, h4("Filtered Sales by Department"),
+                          plotOutput("p_dept_ts", height = 380))
+                 )
              )
            )
   ),
-  # ---- Forecast tab: on-demand ARIMA per store ----
+  
+  # ---- Forecast ----
   tabPanel("Forecast",
            fluidPage(
              br(),
-             fluidRow(
-               column(3, selectInput("store_fc", "Store", choices = sort(unique(store_weekly$store)))),
-               column(3, sliderInput("h_fc", "Forecast horizon (weeks)", min = 4, max = 26, value = 12, step = 1)),
-               column(4, helpText("I fit an ARIMA model on the store’s history and forecast the next h weeks."))
+             div(class = "section-card",
+                 fluidRow(
+                   column(3, selectInput("store_fc", "Store",
+                                         choices = sort(unique(store_weekly$store)))),
+                   column(3, sliderInput("h_fc", "Forecast horizon (weeks)",
+                                         min = 4, max = 26, value = 12, step = 1)),
+                   column(4, helpText("Fits an ARIMA model on the store history and forecasts the next h weeks."))
+                 )
              ),
-             hr(),
-             fluidRow(
-               column(12, h4("Actual (recent) vs Forecast (future)"), plotOutput("p_forecast", height = 420))
+             div(class = "section-card",
+                 fluidRow(
+                   column(12, h4("Actual (recent) vs Forecast (future)"),
+                          plotOutput("p_forecast", height = 420))
+                 )
              )
            )
   ),
   
-  # ---- QA Model Preview -----
-  
+  # ---- Model QA ----
   tabPanel("Model QA",
            fluidPage(
              br(),
-             fluidRow(
-               column(6, h4("Holdout metrics (last 12 weeks)"),
-                      tableOutput("qa_holdout_avg")),
-               column(6, h4("Rolling-origin CV (1..12 weeks)"),
-                      tableOutput("qa_backtest_avg"))
+             div(class = "section-card",
+                 fluidRow(
+                   column(6, h4("Holdout metrics (last 12 weeks)"),
+                          tableOutput("qa_holdout_avg")),
+                   column(6, h4("Rolling-origin CV (1..12 weeks)"),
+                          tableOutput("qa_backtest_avg"))
+                 )
              ),
-             hr(),
-             fluidRow(
-               column(7, h4("RMSE by forecast horizon (per-store lines, mean in bold)"),
-                      plotOutput("qa_horizon_plot", height = 360)),
-               column(5, h4("Per-store holdout metrics"),
-                      div(style="font-size: 12px;", DT::DTOutput("qa_holdout_table")))
+             div(class = "section-card",
+                 fluidRow(
+                   column(7, h4("RMSE by forecast horizon"),
+                          plotOutput("qa_horizon_plot", height = 360)),
+                   column(5, h4("Per-store holdout metrics"),
+                          div(style = "font-size: 12px;", DT::DTOutput("qa_holdout_table")))
+                 )
              ),
-             hr(),
-             fluidRow(
-               column(3,
-                      h4("Audit a store"),
-                      selectInput("qa_store", "Store",
-                                  choices = sort(unique(store_weekly$store)),
-                                  selected = sort(unique(store_weekly$store))[1]),
-                      helpText("This plot recomputes an ARIMA holdout (last 12 weeks) for the selected store.")
-               ),
-               column(9,
-                      h4("Holdout: actual vs ARIMA prediction (last 12 weeks)"),
-                      plotOutput("qa_holdout_plot", height = 380)
-               )
+             div(class = "section-card",
+                 fluidRow(
+                   column(3,
+                          h4("Audit a store"),
+                          selectInput("qa_store", "Store",
+                                      choices = sort(unique(store_weekly$store)),
+                                      selected = sort(unique(store_weekly$store))[1]),
+                          helpText("Recomputes a 12-week ARIMA holdout for the selected store.")
+                   ),
+                   column(9,
+                          h4("Holdout: actual vs ARIMA prediction (last 12 weeks)"),
+                          plotOutput("qa_holdout_plot", height = 380))
+                 )
              )
            )
   ),
   
-  # ---- Data tab: preview & download ----
+  # ---- Data ----
   tabPanel("Data",
            fluidPage(
              br(),
-             h4("Store-week data (processed)"),
-             DTOutput("tbl_store"),
-             br(),
-             downloadButton("dl_store_csv", "Download filtered CSV")
+             div(class = "section-card",
+                 h4("Store-week data (processed)"),
+                 DTOutput("tbl_store"),
+                 br(),
+                 downloadButton("dl_store_csv", "Download filtered CSV")
+             )
            )
   )
 )
+
+
+
 
 # ---------------------------
 # Server

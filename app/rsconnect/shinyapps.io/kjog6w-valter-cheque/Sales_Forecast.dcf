@@ -5,6 +5,6 @@ account: kjog6w-valter-cheque
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 15511343
-bundleId: 10932480
+bundleId: 10932564
 url: https://kjog6w-valter-cheque.shinyapps.io/Sales_Forecast/
 version: 1

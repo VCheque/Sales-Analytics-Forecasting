@@ -1,0 +1,38 @@
+/* Background (image + soft overlay). Image at app/www/bg-retail.jpg */
+body {
+  background:
+    linear-gradient(180deg, rgba(246,249,255,0.88), rgba(246,249,255,0.88)),
+    url('bg-retail.jpg') center center / cover fixed no-repeat;
+}
+
+/* Fallback if no image is present: subtle gradient only */
+body.no-bg {
+  background: linear-gradient(180deg, #f6f9ff, #eef3fb);
+}
+
+/* Card look for content blocks */
+.section-card {
+  background: rgba(255,255,255,0.95);
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.06);
+  padding: 18px 22px;
+  margin-bottom: 18px;
+}
+
+/* Navbar glass */
+.navbar {
+  background-color: rgba(255,255,255,0.75) !important;
+  backdrop-filter: blur(6px);
+  border: none;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+/* Softer corners */
+img, .shiny-plot-output, .datatables {
+  border-radius: 12px;
+}
+
+/* Nicer buttons */
+.btn, .btn-default, .btn-primary {
+  border-radius: 10px;
+}
